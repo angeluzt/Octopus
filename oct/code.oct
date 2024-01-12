@@ -1,0 +1,25 @@
+program MyClass {
+    text millions = a;
+    text millions2 = a;
+
+    /*int million;
+       {
+
+            {
+                 int a;
+                 {
+                     int b;
+                     {
+                         int c;
+                         {
+                             int d = 123/23, e, f;
+                         }
+                         int f;
+                     }
+                     int c;
+                 }
+                 int d;
+            }
+       }*/
+
+}

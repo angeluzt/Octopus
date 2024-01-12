@@ -1,0 +1,10 @@
+|__ID: MyClass
+  |__CONTEXT: {}
+    |__TEXT: text
+      |__ID: millions
+        |__ASSIGN: =
+          |__ID: a
+    |__TEXT: text
+      |__ID: millions2
+        |__ASSIGN: =
+          |__ID: a

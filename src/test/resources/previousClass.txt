@@ -1,0 +1,562 @@
+package org.octopus.analysers;
+
+import org.octopus.enums.TokenType;
+import org.octopus.structure.Node;
+import org.octopus.structure.Token;
+
+import java.util.LinkedList;
+
+public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
+
+    private LinkedList<Token> tokens;
+    private LinkedList<Token> errorTokens = new LinkedList<>(); //
+    private boolean isErrorFound = false;
+
+    @Override
+    public Node analyze(LinkedList<Token> code) throws Exception {
+        this.tokens = code;
+        Node syntacticTree = null;
+
+        if (!tokens.isEmpty()) {
+            try {
+                syntacticTree = program();
+            } catch (Exception ex) {
+                System.out.println(ex);
+            }
+
+        } else {
+            generateSpecificErrorAndThrowException("code is empty", 0);
+        }
+
+        return syntacticTree;
+    }
+
+    public boolean isErrorFound() {
+        return isErrorFound;
+    }
+
+    public LinkedList<Token> getErrorTokens() {
+        return errorTokens;
+    }
+
+    private Node program() throws Exception {
+        Node node = null;
+
+        // expect nodes: program ClassName {
+        removeTokenIfEqualsOrThrowException(TokenType.PROGRAM);
+
+        Token className = removeTokenIfEqualsOrThrowException(TokenType.ID);
+        node = new Node(className, 2);
+
+        removeTokenIfEqualsOrThrowException(TokenType.BRACES_OPEN);
+
+        // search for declarations and sentences
+        node.putNode(declarationList(), 0);
+        node.putNode(sentencesList(), 1);
+
+        // expect node: }
+        removeTokenIfEqualsOrThrowException(TokenType.BRACES_CLOSE);
+
+        return node;
+    }
+
+    private Node declarationList() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        node = declaration();
+
+        removeTokenIfEqualsOrThrowException(TokenType.SEMICOLON);
+
+        if(peekToken().getTokenType() == TokenType.INT ||
+                peekToken().getTokenType() == TokenType.FLOAT ||
+                peekToken().getTokenType() == TokenType.TEXT ||
+                peekToken().getTokenType() == TokenType.BOOL) {
+            node.setBrother(declarationList());
+        }
+
+        return node;
+    }
+
+    private Node declaration() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        switch (peekToken().getTokenType()) {
+
+            case INT:
+            case FLOAT:
+            case TEXT:
+            case BOOL:
+
+                node = new Node(removeFirstToken(), 1);
+                node.putNode(idsList(), 0);
+                break;
+        }
+
+        return node;
+    }
+
+    private Node idsList() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        if(compare(TokenType.ID)) {
+            node = new Node(removeFirstToken(), 1);
+            node.putNode(assignToId(), 0);
+        } else {
+            removeTokenIfEqualsOrThrowException(TokenType.ID);
+        }
+
+        if(compare(TokenType.COMMA)) {
+            removeFirstToken();
+            node.setBrother(idsList());
+        }
+
+        return node;
+    }
+
+    private Node sentencesList() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        node = sentence();
+        switch (peekToken().getTokenType()) {
+
+            case IF:
+            case WHILE:
+            case FOR:
+            case DO:
+            case READ:
+            case WRITE:
+            case BRACES_OPEN:
+            case ID:
+
+                node = new Node(removeFirstToken(), 1);
+                node.putNode(idsList(), 0);
+                break;
+        }
+
+        return node;
+    }
+
+    private Node sentence() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        switch (peekToken().getTokenType()) {
+
+            case IF:
+            case WHILE:
+                node = new Node(removeFirstToken(), 2);
+                node.putNode(booleanExpressionList(), 0);
+                node.putNode(block(), 1);
+                break;
+            case FOR:
+                node = new Node(removeFirstToken(), 4);
+                node.putNode(declarationList(), 0);
+                node.putNode(booleanExpressionList(), 1);
+                node.putNode(assignToId(), 2);
+                node.putNode(block(), 3);
+                break;
+            case BRACES_OPEN:
+                node = block();
+            case DO:
+                node = new Node(removeFirstToken(), 2);
+                node.putNode(block(), 0);
+
+                if(removeTokenIfEqualsOrThrowException(TokenType.WHILE) != null) {
+                    node.putNode(booleanExpressionList(), 1);
+                } else {
+                    removeTokenIfEqualsOrThrowException(TokenType.WHILE);
+                }
+
+                removeTokenIfEqualsOrThrowException(TokenType.SEMICOLON);
+
+                break;
+            case READ:
+            case WRITE:
+                break;
+            case ID:
+                break;
+        }
+        return node;
+    }
+
+    private Node booleanExpressionList() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        removeTokenIfEqualsOrThrowException(TokenType.PARENTHESIS_OPEN);
+        node = booleanOrExpression();
+        removeTokenIfEqualsOrThrowException(TokenType.PARENTHESIS_CLOSE);
+
+        return node;
+    }
+
+    private Node booleanOrExpression() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        node = booleanAndExpression();
+
+        while(compare(TokenType.OR)) {
+        //if(peekToken().getTokenType() == TokenType.OR) {
+            // if we found or, means the current term must be set as a child, because we have: term | term
+            Node nodeCopy = new Node(removeFirstToken(), 2);
+            nodeCopy.putNode(node, 0);
+
+            node = nodeCopy;
+
+            int previousSize =  getTokensSize();
+            node.putNode(orNotDuplicated(), 1);
+            validatePreviousTokenSize(previousSize, "expression expected after | in line: " + peekToken().getLine());
+        }
+
+        return node;
+    }
+
+    private Node orNotDuplicated() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        if(!compare(TokenType.AND) && !compare(TokenType.OR)) {
+            node = booleanOrExpression();
+        } else {
+            generateSpecificErrorAndThrowException("<"+peekToken().getLexeme()+"> not allowed after a <|>", peekToken().getLine());
+        }
+
+        return node;
+    }
+
+    private Node andNotDuplicated() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        if(!compare(TokenType.AND) && !compare(TokenType.OR)) {
+            node = booleanAndExpression();
+        } else {
+            generateSpecificErrorAndThrowException("<"+peekToken().getLexeme()+"> not allowed after a <&>", peekToken().getLine());
+        }
+
+        return node;
+    }
+
+    private Node booleanAndExpression() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        node = notFactor();
+
+        if (peekToken().getTokenType() == TokenType.AND) {
+            // if we found or, means the current term must be set as a child, because we have: term & term
+            Node nodeCopy = new Node(removeFirstToken(), 2);
+            nodeCopy.putNode(node, 0);
+
+            node = nodeCopy;
+            int previousSize =  getTokensSize();
+            node.putNode(andNotDuplicated(), 1);
+
+            validatePreviousTokenSize(previousSize, "expression expected after & in line: " + peekToken().getLine());
+        }
+
+        return node;
+    }
+
+    private Node notFactor() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        if (compare(TokenType.NOT)) {
+            node = new Node(removeFirstToken(), 1);
+            node.putNode(notFactor(), 0);
+        } else {
+            node = booleanFactor();
+        }
+        return node;
+    }
+
+    private Node booleanFactor() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        switch (peekToken().getTokenType()) {
+            case TRUE:
+            case FALSE:
+            //case ID:
+                node = new Node(removeFirstToken(), 0);
+                break;
+            default:
+                node = relationalOperator();
+                break;
+        }
+
+        return node;
+    }
+
+    private Node relationalOperator() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        node = arithmeticExpression();
+        switch (peekToken().getTokenType()) {
+            case LOWER:
+            case LOWER_OR_EQUALS:
+            case HIGHER:
+            case HIGHER_OR_EQUALS:
+            case EQUALS:
+            case DIFFERENT:
+                // if we found or, means the current term must be set as a child, because we have: term <= < > etc term
+                Node nodeCopy = new Node(removeFirstToken(), 2);
+                nodeCopy.putNode(node, 0);
+
+                node = nodeCopy;
+                node.putNode(arithmeticExpression(), 1);
+                //node = new Node(removeFirstToken(), 0);
+                break;
+            default:
+                //TODO:error??
+                break;
+
+        }
+
+        return node;
+    }
+
+    private Node arithmeticExpression() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        node = arithmeticTerm();
+
+        while (compare(TokenType.ADD) || compare(TokenType.SUBTRACT)) {
+            // if we found or, means the current term must be set as a child, because we have: term + - term
+            Node nodeCopy = new Node(removeFirstToken(), 2);
+            nodeCopy.putNode(node, 0);
+
+            node = nodeCopy;
+            node.putNode(arithmeticTerm(), 1);
+        }
+
+        return node;
+    }
+
+    private Node arithmeticTerm() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+        //int a = /8;
+
+        node = factorSign();
+        // * and / have same priority
+        while (compare(TokenType.MULTIPLY) || compare(TokenType.DIVIDE)) {
+            // if we found or, means the current term must be set as a child, because we have: term * / term
+            Node nodeCopy = new Node(removeFirstToken(), 2);
+            //Node nodeCopy = arithmeticOperatorMultiply();
+            nodeCopy.putNode(node, 0);
+
+            node = nodeCopy;
+            node.putNode(factorSign(), 1);
+        }
+
+        return node;
+    }
+
+    private Node factorSign() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        switch (peekToken().getTokenType()) {
+            case ADD:
+            case SUBTRACT:
+                node = new Node(removeFirstToken(), 1);
+                node.putNode(factor(), 0);
+                break;
+            default:
+                node = factor();
+                break;
+        }
+
+        return node;
+    }
+
+    private Node factor() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        if (compare(TokenType.SUBTRACT_SUBTRACT) || compare(TokenType.ADD_ADD)) {
+            node = new Node(removeFirstToken(), 1);
+
+            if (compare(TokenType.ID)) {
+                Node newNode = new Node(removeFirstToken(), 0);
+                node.putNode(newNode, 0);
+
+                return node;
+            } else {
+                removeTokenIfEqualsOrThrowException(TokenType.ID);
+            }
+        }
+
+        switch (peekToken().getTokenType()) {
+            case PARENTHESIS_OPEN:
+                node = booleanExpressionList();
+
+                break;
+            case NUMBER:
+            case FLOAT_NUMBER:
+                node = new Node(removeFirstToken(), 0);
+                break;
+            case ID:
+                node = new Node(removeFirstToken(), 1);
+
+                if (compare(TokenType.ADD_ADD) || compare(TokenType.SUBTRACT_SUBTRACT)) {
+                    Node newNode = new Node(removeFirstToken(), 0);
+                    node.putNode(newNode, 0);
+                }
+                break;
+            case ADD_ADD:
+            case SUBTRACT_SUBTRACT:
+                node = new Node(removeFirstToken(), 1);
+
+                if (compare(TokenType.ID)) {
+                    Node newNode = new Node(removeFirstToken(), 0);
+                    node.putNode(newNode, 1);
+
+                    return node;
+                } else {
+                    removeTokenIfEqualsOrThrowException(TokenType.ID);
+                }
+                break;
+            default:
+                generateSpecificErrorAndThrowException("unexpected token <"+peekToken().getLexeme()+">", peekToken().getLine());
+                //System.out.println(peekToken().getLexeme());
+                break;
+        }
+
+        return node;
+    }
+    private Node block() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        removeTokenIfEqualsOrThrowException(TokenType.BRACES_OPEN);
+        node = sentencesList();
+        removeTokenIfEqualsOrThrowException(TokenType.BRACES_CLOSE);
+
+        return node;
+    }
+
+    private Node assignToId() throws Exception {
+        Node node = null;
+
+        if(isErrorFound)
+            return node;
+
+        switch (peekToken().getTokenType()) {
+            case ASSIGN:
+                node = new Node(removeFirstToken(), 1);
+                node.putNode(booleanOrExpression(), 0);
+                break;
+        }
+
+        return node;
+    }
+
+    private boolean compare(TokenType tokenType) {
+        boolean isSameType = false;
+        if (!tokens.isEmpty()) {
+            if(tokens.getFirst().getTokenType() == tokenType) {
+                isSameType = true;
+            }
+        }
+
+        return isSameType;
+    }
+
+    private void generateSpecificErrorAndThrowException(String message, int line) throws Exception {
+        isErrorFound = true;
+        Token emptyToken = new Token(TokenType.ERROR, message, line);
+        errorTokens.add(emptyToken);
+
+        throw new Exception();
+    }
+
+    private Token removeTokenIfEqualsOrThrowException(TokenType tokenType) throws Exception  {
+        Token token = null;
+        if (!tokens.isEmpty()) {
+            if(tokens.getFirst().getTokenType() == tokenType) {
+                token = tokens.getFirst();
+                nextToken();
+            }
+        }
+
+        if(token == null && !tokens.isEmpty()) {
+
+            isErrorFound = true;
+            errorTokens.add(new Token(TokenType.ERROR, "<" + tokenType.getTokenName() + "> expected", peekToken().getLine()));
+            throw new Exception("<" + tokenType.getTokenName() + "> expected");
+        }
+
+        return token;
+    }
+
+    private void validatePreviousTokenSize(int previousSize, String errorMessage) throws Exception {
+        if(getTokensSize() == previousSize) {
+            isErrorFound = true;
+            errorTokens.add(new Token(TokenType.ERROR, errorMessage, peekToken().getLine()));
+            throw new Exception();
+        }
+    }
+
+    private int getTokensSize() {
+        return tokens.size();
+    }
+
+    private Token peekToken() {
+        return tokens.peek();
+    }
+
+    private Token removeFirstToken() {
+        return tokens.removeFirst();
+    }
+
+    private Token nextToken() {
+        return tokens.removeFirst();
+    }
+
+}

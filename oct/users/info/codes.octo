@@ -1,0 +1,43 @@
+program MyClass {
+    write(a);
+    /*read(a);
+    read(a);
+    read(a);
+    ++c;
+    a = 235 -a-c * d +5;
+    a=234+3+c*3/5-(2-3);
+    for(;;){
+    }
+    for(;;){
+        int a = 0;
+    }*/
+        b = 2*23/4 + "My Text";
+        a = "asd" + 234 - "2342" + / 2342;
+    /*for(;;){
+
+    }
+    if(false) {
+
+    }
+    int xxx = 0;
+    int yyy = 0;
+    int zzz = 0;
+    if(false) {
+        if(false) {
+
+        }
+        if(false) {
+
+        }
+        if(false) {
+            do{
+                do{
+                    for(q=5;false;){
+                        int a = 0;
+                    }
+                }until(true);
+            }until(true);
+        }
+    }
+    do{}until(true);*/
+}

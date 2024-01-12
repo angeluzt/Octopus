@@ -1,0 +1,31 @@
+program MyClass {
+    int void = +a;
+    int void = -a;
+
+    if(true) {
+        if(true) {
+            if(true) {
+
+            }
+        }
+    }
+    //int a = -b;// error, this disable anidacion
+    {
+      bool x = false;
+      {
+        bool y = false;
+          {
+            bool xx = false;
+          }
+      }
+
+      {
+        {
+        bool moda = false;
+            {
+                bool w = false;
+            }
+        }
+      }
+    }
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.octopus.analysers.LexicalAnalyserTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2024-01-08T20:26:31" hostname="TKE-A-4RG8WM" time="1.238">
+  <properties/>
+  <testcase name="testSpecificCode()" classname="org.octopus.analysers.LexicalAnalyserTest" time="1.238"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
