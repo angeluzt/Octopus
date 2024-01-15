@@ -28,10 +28,10 @@ public class Node {
     }
 
     public Node getChildrenAt(int index) {
-        if(children[index] == null) {
-            return null;
+        if(children != null && children.length > 0 && index < children.length) {//TODO: possible bug
+            return children[index];
         }
-        return children[index];
+        return null;
     }
 
     public void setChildren(Node[] children) {
@@ -64,5 +64,9 @@ public class Node {
 
     public void setToken(Token token) {
         this.token = token;
+    }
+
+    public boolean compare(TokenType token) {
+        return this.token.getTokenType().compare(token);
     }
 }

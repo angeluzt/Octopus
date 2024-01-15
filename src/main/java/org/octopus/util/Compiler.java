@@ -105,12 +105,14 @@ public class Compiler {
     }
 
     private String getFinalFileLocationForBuildFile(String mainFolderPath, String buildFilePath) {
-        String [] response = buildFilePath.split(mainFolderPath);
+        String main = mainFolderPath.replace("\\", "/");
+        String buildPth = buildFilePath.replace("\\", "/");
+        String [] response = buildPth.split(main);
         // Use Paths to create a Path object from the file path
 
         //System.out.println("File internal path: " + response[1]);
 
-        return response[1];
+        return response[1].replace("/", "\\");
     }
 
     private String readFileAsString(Path filePath) throws IOException {

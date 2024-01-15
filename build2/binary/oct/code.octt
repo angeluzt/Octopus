@@ -1,10 +1,18 @@
 |__ID: MyClass
   |__CONTEXT: {}
-    |__TEXT: text
-      |__ID: millions
-        |__ASSIGN: =
-          |__ID: a
-    |__TEXT: text
-      |__ID: millions2
-        |__ASSIGN: =
-          |__ID: a
+    |__BOOL: bool
+      |__ID: a
+    |__ASSIGN: =
+      |__ID: a
+      |__STRING: true
+    |__ASSIGN: =
+      |__ID: a
+      |__FALSE: false
+    |__ASSIGN: =
+      |__ID: a
+      |__TRUE: true
+    |__ASSIGN: =
+      |__ID: a
+      |__OR: |
+        |__ID: a
+        |__STRING: a

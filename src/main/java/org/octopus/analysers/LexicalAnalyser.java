@@ -27,7 +27,7 @@ import static org.octopus.enums.LexicalState.STRING;
 import static org.octopus.enums.LexicalState.VAR;
 import static org.octopus.enums.LexicalState.VERIFY_COMMENT;
 
-public class LexicalAnalyser implements Analyser<String, LinkedList> {
+public class LexicalAnalyser implements Analyser<String, LinkedList<Token>> {
 
     /**
      * Receive code in String format and tokenize the code.
@@ -38,9 +38,8 @@ public class LexicalAnalyser implements Analyser<String, LinkedList> {
      */
     public LinkedList<Token> analyze(String code) throws Exception {
         code += " ";
-        char letters[] = code.toCharArray();
+        char []letters = code.toCharArray();
 
-        int index = 0;
         int lineNumber = 1;
         int column = 0;
         boolean isFraction = false;
@@ -48,93 +47,96 @@ public class LexicalAnalyser implements Analyser<String, LinkedList> {
         StringBuilder currentToken = new StringBuilder();
         LinkedList<Token> tokensResponse = new LinkedList<>();
 
-        for (;index < letters.length; index++) {
+        for (int index = 0;index < letters.length; index++) {
             column++;
             ////System.out.println("Current: >" + letters[index] + "<");
             switch (state) {
                 case INITIAL:
                     // ignore blank characters
-                    if (isSpace(letters[index])) {
-                        if(letters[index] == '\n') {
-                            lineNumber++;
-                            column = 0;
-                            //System.out.println("Current line: " + lineNumber);
+                    if(letters[index] == '\r') {
+
+                    } else if (isSpace(letters[index])) {
+                            if(letters[index] == '\n') {
+                                lineNumber++;
+                                column = 0;
+                                //System.out.println("Current line: " + lineNumber);
+                            }
+                        } else if (Character.isLetter(letters[index]) || letters[index] == '_') {
+                            //System.out.println("Start: text search");
+                            currentToken.append(letters[index]);
+                            state = VAR;
+                        } else if (Character.isDigit(letters[index])) {
+                            //System.out.println("Start: digit search");
+                            currentToken.append(letters[index]);
+                            state = NUMBER;
+                        } else if (letters[index] == '/') {
+                            //System.out.println("Start: verify comment");
+                            state = VERIFY_COMMENT;
+                        } else if (letters[index] == '+') {
+                            //System.out.println("Start: add logic");
+                            state = HAS_EQUALS_IN_ADD;
+                        } else if (letters[index] == '-') {
+                            ////System.out.println("Start: verify comment");
+                            //state = VERIFY_COMMENT;
+                            state = HAS_EQUALS_IN_SUBTRACT;
+                        } else if (letters[index] == '*') {
+                            ////System.out.println("Start: verify comment");
+                            state = HAS_EQUALS_IN_MULTIPLY;
+                        } else if (letters[index] == '>') {
+                            ////System.out.println("Start: verify comment");
+                            state = HAS_EQUALS_IN_HIGHER_THAN;
+                        } else if (letters[index] == '<') {
+                            ////System.out.println("Start: verify comment");
+                            state = HAS_EQUALS_IN_LOWER_THAN;
+                        } else if (letters[index] == '=') {
+                            ////System.out.println("Start: verify comment");
+                            state = HAS_EQUALS_IN_EQUALS;
+                        } else if (letters[index] == '!') {
+                            ////System.out.println("Start: verify comment");
+                            state = HAS_EQUALS_IN_DIFFERENT;
+                        } else if (letters[index] == '"') {
+                            state = STRING;
+                        }  else if (letters[index] == ';') {
+                            //System.out.println("; found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.SEMICOLON, lineNumber, column));
+                        } else if (letters[index] == ',') {
+                            //System.out.println(", found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.COMMA, lineNumber, column));
+                        }  else if (letters[index] == '{') {
+                            //System.out.println("{ found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.BRACES_OPEN, lineNumber, column));
+                        } else if (letters[index] == '}') {
+                            //System.out.println("} found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.BRACES_CLOSE, lineNumber, column));
+                        } else if (letters[index] == '(') {
+                            //System.out.println("( found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.PARENTHESIS_OPEN, lineNumber, column));
+                        } else if (letters[index] == ')') {
+                            //System.out.println(") found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.PARENTHESIS_CLOSE, lineNumber, column));
+                        } else if (letters[index] == '[') {
+                            //System.out.println("[ found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.BRACKET_OPEN, lineNumber, column));
+                        } else if (letters[index] == ']') {
+                            //System.out.println("] found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.BRACKET_CLOSE, lineNumber, column));
+                        } else if (letters[index] == '&') {
+                            state = LOGIC_AND;
+                            //System.out.println("& and found");
+                            //tokensResponse.addLast(getTokenInstance(TokenType.AND, lineNumber, column));
+                        } else if (letters[index] == '|') {
+                            state = LOGIC_OR;
+                            //System.out.println("| or found");
+                            //tokensResponse.addLast(getTokenInstance(TokenType.OR, lineNumber, column));
+                        } else if (letters[index] == '?') {
+                            //System.out.println("? or found");
+                            tokensResponse.addLast(getTokenInstance(TokenType.TERNARY, lineNumber, column));
+                        } else {
+                            //System.out.println(letters[index] + " found???");
+                            tokensResponse.addLast(getTokenInstanceLiterals(TokenType.UNKNOWN, letters[index] + "", lineNumber, column));
+                            throw new Exception("Unknown character: >" + letters[index] + "<");
                         }
-                    } else if (Character.isLetter(letters[index]) || letters[index] == '_') {
-                        //System.out.println("Start: text search");
-                        currentToken.append(letters[index]);
-                        state = VAR;
-                    } else if (Character.isDigit(letters[index])) {
-                        //System.out.println("Start: digit search");
-                        currentToken.append(letters[index]);
-                        state = NUMBER;
-                    } else if (letters[index] == '/') {
-                        //System.out.println("Start: verify comment");
-                        state = VERIFY_COMMENT;
-                    } else if (letters[index] == '+') {
-                        //System.out.println("Start: add logic");
-                        state = HAS_EQUALS_IN_ADD;
-                    } else if (letters[index] == '-') {
-                        ////System.out.println("Start: verify comment");
-                        //state = VERIFY_COMMENT;
-                        state = HAS_EQUALS_IN_SUBTRACT;
-                    } else if (letters[index] == '*') {
-                        ////System.out.println("Start: verify comment");
-                        state = HAS_EQUALS_IN_MULTIPLY;
-                    } else if (letters[index] == '>') {
-                        ////System.out.println("Start: verify comment");
-                        state = HAS_EQUALS_IN_HIGHER_THAN;
-                    } else if (letters[index] == '<') {
-                        ////System.out.println("Start: verify comment");
-                        state = HAS_EQUALS_IN_LOWER_THAN;
-                    } else if (letters[index] == '=') {
-                        ////System.out.println("Start: verify comment");
-                        state = HAS_EQUALS_IN_EQUALS;
-                    } else if (letters[index] == '!') {
-                        ////System.out.println("Start: verify comment");
-                        state = HAS_EQUALS_IN_DIFFERENT;
-                    } else if (letters[index] == '"') {
-                        state = STRING;
-                    }  else if (letters[index] == ';') {
-                        //System.out.println("; found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.SEMICOLON, lineNumber, column));
-                    } else if (letters[index] == ',') {
-                        //System.out.println(", found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.COMMA, lineNumber, column));
-                    }  else if (letters[index] == '{') {
-                        //System.out.println("{ found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.BRACES_OPEN, lineNumber, column));
-                    } else if (letters[index] == '}') {
-                        //System.out.println("} found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.BRACES_CLOSE, lineNumber, column));
-                    } else if (letters[index] == '(') {
-                        //System.out.println("( found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.PARENTHESIS_OPEN, lineNumber, column));
-                    } else if (letters[index] == ')') {
-                        //System.out.println(") found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.PARENTHESIS_CLOSE, lineNumber, column));
-                    } else if (letters[index] == '[') {
-                        //System.out.println("[ found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.BRACKET_OPEN, lineNumber, column));
-                    } else if (letters[index] == ']') {
-                        //System.out.println("] found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.BRACKET_CLOSE, lineNumber, column));
-                    } else if (letters[index] == '&') {
-                        state = LOGIC_AND;
-                        //System.out.println("& and found");
-                        //tokensResponse.addLast(getTokenInstance(TokenType.AND, lineNumber, column));
-                    } else if (letters[index] == '|') {
-                        state = LOGIC_OR;
-                        //System.out.println("| or found");
-                        //tokensResponse.addLast(getTokenInstance(TokenType.OR, lineNumber, column));
-                    } else if (letters[index] == '?') {
-                        //System.out.println("? or found");
-                        tokensResponse.addLast(getTokenInstance(TokenType.TERNARY, lineNumber, column));
-                    } else {
-                        //System.out.println(letters[index] + " found???");
-                        tokensResponse.addLast(getTokenInstanceLiterals(TokenType.UNKNOWN, letters[index] + "", lineNumber, column));
-                        throw new Exception("Unknown character: >" + letters[index] + "<");
-                    }
+
                     break;
                 case NUMBER:
                     if (Character.isDigit(letters[index])) {
@@ -146,7 +148,7 @@ public class LexicalAnalyser implements Analyser<String, LinkedList> {
                     } else {
 
                         if(isFraction) {
-                           //System.out.println(">final fraction found: " + currentToken);
+                            //System.out.println(">final fraction found: " + currentToken);
                             tokensResponse.addLast(getTokenInstanceLiterals(TokenType.FLOAT_NUMBER, currentToken.toString(), lineNumber, column));
                         } else {
                             //System.out.println(">regular number found: " + currentToken);
@@ -186,7 +188,7 @@ public class LexicalAnalyser implements Analyser<String, LinkedList> {
                         column--;
                     }
                     break;
-                case STRING:
+            case STRING:
                     if (letters[index] != '"') {
                         currentToken.append(letters[index]);
                         //System.out.println(">text search: " + currentToken);

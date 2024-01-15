@@ -115,7 +115,7 @@ public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
                     //node.putNode(booleanExpressionList(), 0);
                     //node.putNode(block(), 1);
                 } else {
-                    tokenNew.setTokenType(TokenType.IF);
+                    tokenNew.setTokenType(TokenType.ELSE);
                     node = new Node(tokenNew, 1);
                     node.putNode(block(), 0);
                 }
@@ -128,12 +128,14 @@ public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
             case FOR:
                 // for(declaration;
                 node = new Node(removeFirstToken(), 4);
+
                 removeTokenIfEqualsOrThrowException(TokenType.PARENTHESIS_OPEN);
 
                 node.putNode(declareVariable(), 0);
                 //if empty then use an optional assignation =
                 if(node.getChildren()[0] == null) {
                     node.putNode(optionalDeclarationVarName(), 0);
+                    //node.putNode(assignment(), 0);
                     // semicolon is not deleted automatically in optional assignation
                     removeTokenIfEqualsOrThrowException(TokenType.SEMICOLON);
                 }
@@ -196,49 +198,20 @@ public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
     // int, bool, float, text
     private Node codeLoop() throws Exception {
         Node node = null;
-        //node = loopsDeclaration();
-        //while (tokens.size() != 1) {
-            /*compare(TokenType.IF) || compare(TokenType.FOR)
-                || compare(TokenType.UNTIL) || compare(TokenType.BRACES_OPEN)
-                || compare(TokenType.READ) || compare(TokenType.WRITE)
-                || compare(TokenType.DO) || compare(TokenType.INT)
-                || compare(TokenType.FLOAT) || compare(TokenType.TEXT)
-                || compare(TokenType.BOOL)) {*/
 
-            //if(node == null) {
-            //    node = codeLoop();
-            //} else {
-
-                Node nodeCopy = declareVariable();
-                if(nodeCopy == null) {
-                    nodeCopy = sentence();
-                }
-                if(nodeCopy == null) {
-                    nodeCopy = assignment();
-                    if (nodeCopy != null){
-                        removeTokenIfEqualsOrThrowException(TokenType.SEMICOLON);
-                    }
-                }
-
-                //nodeCopy.putNode(node, 0);
-                if (nodeCopy != null)
-                    nodeCopy.setBrother(codeLoop());
-                //node = nodeCopy;
-
-                //node.putNode(loopsDeclaration(), 1);
-                //node.setBrother(codeLoop());
-            //}
-        //}
-        // if nothing was found then search for assignment instructions like: a++; b=234+3+c*3/5-(2-3);
-        /*if(node == null) {
-            node = assignment();
-            if(node != null) {
+        Node nodeCopy = declareVariable();
+        if(nodeCopy == null) {
+            nodeCopy = sentence();
+        }
+        if(nodeCopy == null) {
+            nodeCopy = assignment();
+            if (nodeCopy != null){
                 removeTokenIfEqualsOrThrowException(TokenType.SEMICOLON);
-                node.setBrother(codeLoop());
             }
-        } else if(tokens.size() > 1) {
-            node.setBrother(codeLoop());
-        }*/
+        }
+
+        if (nodeCopy != null)
+            nodeCopy.setBrother(codeLoop());
 
         return nodeCopy;
     }
@@ -320,6 +293,32 @@ public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
         node = logicalSecondGrade();
 
         switch (peekToken().getTokenType()) {
+            case ASSIGN:
+                //TODO: include missing equalities
+                //node = new Node(removeFirstToken(), 1);
+                //node.putNode(logicalSecondGrade(), 0);
+                Node nodeCopy = new Node(removeFirstToken(), 2);
+                nodeCopy.putNode(node, 0);
+
+                node = nodeCopy;
+                node.putNode(logicalSecondGrade(), 1);
+                break;
+            default:
+                //TODO:error??
+                break;
+
+        }
+
+        return node;
+    }
+
+    // =, +=, -+, *=, /=, %=
+    private Node obligatoryAssignment() throws Exception {
+        Node node = null;
+
+        //node = logicalSecondGrade();
+        switch (peekToken().getTokenType()) {
+            case UNARY_ADD:
             case ASSIGN:
                 //TODO: include missing equalities
                 node = new Node(removeFirstToken(), 1);
@@ -656,7 +655,7 @@ public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
     }
 
     private void generateSpecificErrorAndThrowException(String message, int line, int column) throws Exception {
-        
+
         Token emptyToken = new Token(TokenType.ERROR, message, line, column);
         errorTokens.add(emptyToken);
 
@@ -673,9 +672,9 @@ public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
         }
 
         if(token == null && !tokens.isEmpty()) {
-            
+
             errorTokens.add(new Token(TokenType.ERROR, "<" + tokenType.getTokenName() + "> expected", peekToken().getLine(), peekToken().getColumn()));
-            throw new Exception("<" + tokenType.getTokenName() + "> expected");
+            //throw new Exception("<" + tokenType.getTokenName() + "> expected");
         }
 
         return token;
@@ -683,7 +682,7 @@ public class SyntacticAnalyser implements Analyser<LinkedList<Token>, Node> {
 
     private void validatePreviousTokenSize(int previousSize, String errorMessage) throws Exception {
         if(getTokensSize() == previousSize) {
-            
+
             errorTokens.add(new Token(TokenType.ERROR, errorMessage, peekToken().getLine(), peekToken().getColumn()));
             throw new Exception();
         }

@@ -14,11 +14,11 @@ public class Constants {
     public static final String UNKNOWN_TKN = "unknown";
 
     public static final String OCT_EXTENSION = "oct";
-    public static final String CODE_LOCATION_PATH = "/oct";
-    public static final String FOLDER_BUILD_NAME = "/build2";
-    public static final String ERROR_PATH = FOLDER_BUILD_NAME + "/error/errors.octe";
-    public static final String THREE_PATH = FOLDER_BUILD_NAME + "/three";
-    public static final String BINARY_PATH = FOLDER_BUILD_NAME + "/binary";
+    public static final String CODE_LOCATION_PATH = "\\oct";
+    public static final String FOLDER_BUILD_NAME = "\\build2";
+    public static final String ERROR_PATH = FOLDER_BUILD_NAME + "\\error\\errors.octe";
+    public static final String THREE_PATH = FOLDER_BUILD_NAME + "\\three";
+    public static final String BINARY_PATH = FOLDER_BUILD_NAME + "\\binary";
 
     public static final String COMPILED_FILE_CODE = "c";
     public static final String THREE_FILE_CODE = "t";
